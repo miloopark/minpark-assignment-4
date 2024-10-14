@@ -2,32 +2,41 @@ name: Latent Semantic Analysis (LSA) Search Engine
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    # Step to check out the repository
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12' 
-
-    - name: Install dependencies
-      run: make install
-
-    - name: Run application (with delay to ensure server starts)
+    # Step to install dependencies
+    - name: Install Dependencies
       run: |
-        make run &
-        sleep 5
+        python -m pip install --upgrade pip
+        # Install dependencies from requirements.txt if it exists
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        # If no requirements.txt is found, ensure main dependencies are installed
+        pip install Flask scikit-learn nltk
 
-    - name: Verify server is running
-      run: curl http://127.0.0.1:3000
+    # Step to download NLTK stopwords (needed by the app)
+    - name: Download NLTK data
+      run: |
+        python -m nltk.downloader stopwords
+
+    # Step to run the application (Flask) directly instead of `make run`
+    - name: Run Flask App Directly
+      run: |
+        python app.py > server.log 2>&1 &
+        sleep 30
+        cat server.log  # Output logs for debugging
+
+    # Step to confirm that the server is running
+    - name: Confirm Server is Running
+      run: |
+        curl --fail http://localhost:3000 || exit 1
